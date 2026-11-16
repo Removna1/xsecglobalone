@@ -1,0 +1,40 @@
+# Publishes the built site in this repo's root to GitHub Pages.
+#
+# This file lives in the SOURCE repo at scripts/pages-workflow.yml and is copied
+# into the public repo by scripts/deploy-pages.sh. It has to travel with the
+# deploy: that script force-pushes fresh history, so anything not staged is lost.
+#
+# We use the Actions path rather than the classic branch-based builder, whose
+# builds for this repo wedged at duration=0 and never completed.
+name: Deploy static site to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; the newest push wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          # The repo root is the site — it is already a built static export.
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
